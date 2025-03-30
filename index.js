@@ -5,17 +5,6 @@ app.use(express.json())
 app.use(cors())
 app.use(express.static('dist'))
 
-
-const requestLogger = (request, response, next) => {
-  console.log('Method:', request.method)
-  console.log('Path:  ', request.path)
-  console.log('Body:  ', request.body)
-  console.log('---')
-  next()
-}
-
-app.use(requestLogger)
-
 let persons = [
     { 
       "id": 1,
@@ -107,13 +96,6 @@ app.post('/api/persons', (request, response) => {
   persons = persons.concat(person)
   response.json(person)
 })
-
-
-const unknownEndpoint = (request, response) => {
-  response.status(404).send({ error: 'unknown endpoint' })
-}
-
-app.use(unknownEndpoint)
 
 const PORT = process.env.PORT || 3001
   app.listen(PORT, () => {
