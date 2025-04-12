@@ -14,6 +14,20 @@ POST http://localhost:3001/api/persons
 Content-type: application/json
 
 {
-    "name": "Harto Hilas",
-    "number": "004-123456"
+    "name": "Chat Falluto",
+    "number": "021-98789015"
+}
+###
+DELETE http://localhost:3001/api/persons/67eebd64087d2714c34982db
+
+###
+GET http://localhost:3001/api/persons/67eebc7e84b743b4578eecdc
+
+####
+PUT http://localhost:3001/api/persons/67eebc7e84b743b4578eecdc
+Content-Type: application/json
+
+{
+  "name": "Arto Hellas",
+  "number": "060-123456"
 }
