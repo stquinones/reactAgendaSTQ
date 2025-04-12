@@ -5,7 +5,7 @@ const cors = require('cors')
 app.use(express.json())
 app.use(cors())
 const Person = require('./models/agenda')
-//app.use(express.static('dist'))
+app.use(express.static('dist'))
 
   
 app.get('/', (request, response) => {
