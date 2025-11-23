@@ -1,5 +1,4 @@
 const fs = require('fs');
-const { ChartJSNodeCanvas } = require('chartjs-node-canvas');
 
 // Entrada / salida
 const inputFile = process.argv[2];
@@ -39,82 +38,78 @@ const relevantSection = raw.substring(start, end + 200);
 // Limpiamos prefijos como: [app-device-farm-atfsa__u.apk Android #0-0]
 const cleanedSection = relevantSection.replace(/\[app-device-farm-[^\]]+\]\s*/g, '');
 
-// Reemplazar encabezado por fecha actual
+// Detectamos fecha
 const fechaHoy = new Date().toLocaleDateString('es-AR');
 
-// Detectar cantidad de tests pasados
+// Reemplazo de encabezado ("spec" → Reporte con fecha)
+let formattedSection = cleanedSection.replace(/"spec"[\s\n\r]*Reporter:/, `Reporte – ${fechaHoy}`);
+
+// Extraemos resumen de números
 const passingMatch = relevantSection.match(/(\d+)\s+passing\s+\(([\dms .]+)\)/);
 const totalPassed = passingMatch ? parseInt(passingMatch[1]) : 0;
 const duration = passingMatch ? passingMatch[2] : 'N/A';
 
-// Detectar spec summary
 const specMatch = relevantSection.match(/Spec Files:\s+(\d+)\s+passed.*in\s+([\d:]+)/);
 const specSummary = specMatch
   ? `📁 ${specMatch[1]} archivo/s OK — tiempo total ${specMatch[2]}`
   : 'Tiempo total no detectado';
 
-// Gráfico de torta
-async function generarGrafico() {
-  const width = 400;
-  const height = 400;
-  const chartJSNodeCanvas = new ChartJSNodeCanvas({ width, height });
-
-  const config = {
+// Función: generar gráfico de torta con QuickChart (sin librerías externas)
+function generarGrafico() {
+  const chartConfig = {
     type: 'pie',
     data: {
       labels: ['PASSED', 'FAILED'],
       datasets: [{
-        data: [totalPassed, 0] // Si detectamos fallos en el futuro, se reemplaza
+        data: [totalPassed, 0] // Si querés detectar fallos más adelante, se ajusta acá
       }]
     }
   };
-  return await chartJSNodeCanvas.renderToDataURL(config);
+
+  const quickChartURL = `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(chartConfig))}&format=png&width=400&height=400&backgroundColor=white`;
+
+  return `<img src="${quickChartURL}" alt="Resultados de Test" style="max-width: 300px; border-radius: 8px; box-shadow: 0px 3px 6px #ddd;">`;
 }
 
-(async () => {
-  const graficoBase64 = await generarGrafico();
+const graficoHTML = generarGrafico();
 
-  let formattedSection = cleanedSection
-    .replace(/"spec"[\s\n\r]*Reporter:/, `Reporte – ${fechaHoy}`);
+// Aplicamos formato visual verde/rojo y sanitización
+formattedSection = sanitize(formattedSection)
+  .replace(/✓/g, '<span class="test-pass">✓</span>')
+  .replace(/✗|x /g, '<span class="test-fail">✗</span>');
 
-  formattedSection = sanitize(formattedSection)
-    .replace(/✓/g, '<span class="test-pass">✓</span>')
-    .replace(/✗|x /g, '<span class="test-fail">✗</span>');
+// Armamos el HTML final
+const htmlReport = `
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Reporte Device Farm</title>
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; background: #fafafa; color: #333; }
+    .summary { background: #e8ffe6; border-left: 5px solid #56d466; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+    .test-pass { color: #3cb043; font-weight: bold; }
+    .test-fail { color: #e60000; font-weight: bold; }
+    .details { background: white; border-radius: 8px; border: 1px solid #ddd; padding: 20px; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>📄 Reporte de Automatización — AWS Device Farm</h1>
 
-  // Armamos el HTML final
-  const htmlReport = `
-  <html>
-  <head>
-    <meta charset="utf-8"/>
-    <title>Reporte Device Farm</title>
-    <style>
-      body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; background: #fafafa; color: #333; }
-      .summary { background: #e8ffe6; border-left: 5px solid #56d466; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-      .test-pass { color: #3cb043; font-weight: bold; }
-      .test-fail { color: #e60000; font-weight: bold; }
-      .details { background: white; border-radius: 8px; border: 1px solid #ddd; padding: 20px; white-space: pre-wrap; }
-      img { max-width: 300px; margin-top: 10px; border-radius: 8px; box-shadow: 0px 3px 6px #ddd; }
-    </style>
-  </head>
-  <body>
-    <h1>📄 Reporte de Automatización — AWS Device Farm</h1>
+  <div class="summary">
+    ✔ ${totalPassed} tests PASSED en ${duration}<br/>
+    ${specSummary}
+  </div>
 
-    <div class="summary">
-      ✔ ${totalPassed} tests PASSED en ${duration}<br/>
-      ${specSummary}
-    </div>
+  <h2>📊 Resumen visual</h2>
+  ${graficoHTML}
 
-    <h2>📊 Resumen visual</h2>
-    <img src="${graficoBase64}" alt="Resultados de Test"/>
+  <h2>📌 Detalle de ejecución</h2>
+  <div class="details">${formattedSection}</div>
 
-    <h2>📌 Detalle de ejecución</h2>
-    <div class="details">${formattedSection}</div>
+  <p style="font-size:12px; color:#777;">Reporte generado automáticamente por GitHub Actions.</p>
+</body>
+</html>
+`;
 
-    <p style="font-size:12px; color:#777;">Reporte generado automáticamente por GitHub Actions.</p>
-  </body>
-  </html>
-  `;
-
-  fs.writeFileSync(outputFile, htmlReport);
-  console.log('📄 Reporte generado correctamente');
-})();
+fs.writeFileSync(outputFile, htmlReport);
+console.log('📄 Reporte generado correctamente');
