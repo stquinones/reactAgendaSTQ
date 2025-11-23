@@ -60,9 +60,12 @@ function generarGrafico() {
     type: 'pie',
     data: {
       labels: ['PASSED', 'FAILED'],
-      datasets: [{
-        data: [totalPassed, 0] // Si querés detectar fallos más adelante, se ajusta acá
-      }]
+     datasets: [{
+     data: [totalPassed, 0],
+     backgroundColor: ['#28a745', '#dc3545'], // Verde y rojo
+     borderColor: ['#ffffff', '#ffffff'], // Opcional: borde blanco
+     borderWidth: 2
+     }]
     }
   };
 
@@ -87,8 +90,8 @@ const htmlReport = `
   <style>
     body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; background: #fafafa; color: #333; }
     .summary { background: #e8ffe6; border-left: 5px solid #56d466; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-    .test-pass { color: #27F598; font-weight: bold; }
-    .test-fail { color: #F52727; font-weight: bold; }
+    .test-pass { color: #149635; font-weight: bold; }
+    .test-fail { color: #961F14; font-weight: bold; }
     .details { background: white; border-radius: 8px; border: 1px solid #ddd; padding: 20px; white-space: pre-wrap; }
   </style>
 </head>
