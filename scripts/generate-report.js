@@ -87,8 +87,8 @@ const htmlReport = `
   <style>
     body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; background: #fafafa; color: #333; }
     .summary { background: #e8ffe6; border-left: 5px solid #56d466; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-    .test-pass { color: #3cb043; font-weight: bold; }
-    .test-fail { color: #e60000; font-weight: bold; }
+    .test-pass { color: #27F598; font-weight: bold; }
+    .test-fail { color: #F52727; font-weight: bold; }
     .details { background: white; border-radius: 8px; border: 1px solid #ddd; padding: 20px; white-space: pre-wrap; }
   </style>
 </head>
