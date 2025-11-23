@@ -32,7 +32,8 @@ jobs:
           reports/devicefarm-log.txt \
           reports/devicefarm-report.html
 
-    - name: Subir artefacto del reporte
+        - name: Subir artefacto del reporte
+      id: upload
       uses: actions/upload-artifact@v4
       with:
         name: devicefarm-report
@@ -44,7 +45,7 @@ jobs:
         payload: |
           {
             "channel": "#prueba-app",
-            "text": "📄 *Nuevo Reporte de Device Farm*\n👉 <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|Click acá para ver el reporte HTML>"
+            "text": "📄 *Nuevo Reporte de Device Farm*\n👉 <${{ steps.upload.outputs.artifact-url }}|Click acá para ver el reporte HTML>"
           }
       env:
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
