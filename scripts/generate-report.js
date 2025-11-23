@@ -40,13 +40,10 @@ const cleanedSection = relevantSection.replace(/\[app-device-farm-[^\]]+\]\s*/g,
 
 const fechaHoy = new Date().toLocaleDateString('es-AR');
 
-// 1️⃣ Primero reemplazamos el encabezado ANTES de sanitizar
 let formattedSection = cleanedSection
-  .replace(/"spec"\s+Reporter:/, `Reporte – ${fechaHoy}`);
+  .replace(/"spec"[\s\n\r]*Reporter:/, `Reporte – ${fechaHoy}`);
 
-// 2️⃣ Luego sanitizamos
 formattedSection = sanitize(formattedSection)
-  // 3️⃣ Y al final aplicamos formatos visuales
   .replace(/✓/g, '<span class="test-pass">✓</span>')
   .replace(/✗|x /g, '<span class="test-fail">✗</span>');
 
