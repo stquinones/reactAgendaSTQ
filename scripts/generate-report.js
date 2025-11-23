@@ -1,64 +1,59 @@
 const fs = require('fs');
+const path = require('path');
 
-function generateReport(inputPath, outputPath) {
-    const raw = fs.readFileSync(inputPath, 'utf8');
+const inputPath = process.argv[2];
+const outputPath = process.argv[3];
 
-    const installPhase = extractSection(raw, "Entering phase install", "Entering phase pre_test");
-    const preTestPhase = extractSection(raw, "Entering phase pre_test", "Entering phase test");
-    const testPhase = extractSection(raw, "Entering phase test", "###########");
+// Leer archivo original
+const raw = fs.readFileSync(inputPath, 'utf8');
 
-    const html = `
-    <html>
-    <head>
-        <title>Device Farm Report</title>
-        <style>
-            body { font-family: Arial; padding: 20px; }
-            h2 { color: #444; border-left: 4px solid #888; padding-left: 8px; }
-            pre {
-                background: #f4f4f4;
-                padding: 10px;
-                border-radius: 6px;
-                overflow-x: auto;
-                font-size: 13px;
-            }
-        </style>
-    </head>
-    <body>
-        <h1>Reporte de Device Farm</h1>
+// Buscar sección relevante
+const start = raw.indexOf('"spec" Reporter:');
+const end = raw.indexOf('Spec Files:');
 
-        <h2>📦 Fase de Install</h2>
-        <pre>${sanitize(installPhase)}</pre>
-
-        <h2>🚀 Fase de Pre-Test</h2>
-        <pre>${sanitize(preTestPhase)}</pre>
-
-        <h2>🧪 Fase de Test</h2>
-        <pre>${sanitize(testPhase)}</pre>
-
-        <hr/>
-        <p style="color:#666;">Reporte generado automáticamente por GitHub Actions.</p>
-    </body>
-    </html>
-    `;
-
-    fs.writeFileSync(outputPath, html, 'utf8');
+if (start === -1 || end === -1) {
+  console.error('⚠ No se encontró la sección del spec reporter.');
+  process.exit(1);
 }
 
-function extractSection(text, startMarker, endMarker) {
-    const start = text.indexOf(startMarker);
-    if (start === -1) return "";
+const relevantSection = raw.substring(start, end + 100); // un poco más para incluir toda la línea
 
-    const end = text.indexOf(endMarker, start + startMarker.length);
-    if (end === -1) return text.substring(start);
+// Extraer el número de pasados y tiempo
+const passingMatch = relevantSection.match(/(\d+)\s+passing\s+\(([\dms .]+)\)/);
+const specMatch = relevantSection.match(/Spec Files:\s+(\d+)\s+passed.*in\s+([\d:]+)/);
 
-    return text.substring(start, end);
-}
+const summary = passingMatch
+  ? `✔ ${passingMatch[1]} tests PASSED en ${passingMatch[2]}`
+  : 'Resultado no detectado';
 
-function sanitize(str) {
-    return str.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
+const specSummary = specMatch
+  ? `📁 ${specMatch[1]} archivo OK — tiempo total ${specMatch[2]}`
+  : 'Tiempo no detectado';
 
-const inputFile = process.argv[2];
-const outputFile = process.argv[3];
+// Construcción del HTML
+const htmlReport = `
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Reporte Automation</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    .summary { background: #e8ffe6; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
+    pre { background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h2>📄 Reporte de Automatización — AWS Device Farm</h2>
+  <div class="summary">
+    <p><strong>${summary}</strong></p>
+    <p>${specSummary}</p>
+  </div>
+  <h3>📌 Detalle de ejecución</h3>
+  <pre>${relevantSection}</pre>
+</body>
+</html>
+`;
 
-generateReport(inputFile, outputFile);
+// Guardar archivo
+fs.writeFileSync(outputPath, htmlReport);
+console.log('Reporte HTML generado con éxito.');
