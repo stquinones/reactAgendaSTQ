@@ -20,7 +20,7 @@ jobs:
         run: mkdir -p reports
 
       - name: Copiar archivo de Device Farm
-        run: cp "device-farm-output.txt" reports/devicefarm-log.txt
+        run: cp device-farm-output.txt reports/devicefarm-log.txt
 
       - name: Instalar dependencias
         run: npm install
