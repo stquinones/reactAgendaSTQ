@@ -39,7 +39,7 @@ jobs:
         path: reports/devicefarm-report.html
 
     - name: Enviar link del reporte a Slack
-      uses: slackapi/slack-github-actions@v1.24.0
+      uses: slackapi/slack-github-action@v1.27.0
       with:
         payload: |
           {
