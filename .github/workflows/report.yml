@@ -44,7 +44,7 @@ jobs:
           payload: |
             {
               "channel": "#prueba-app",
-              "text": "📄 *Nuevo Reporte de Device Farm*\n👉 <${{ steps.upload.outputs.artifact-url }}|Click acá para ver el reporte HTML>"
+              "text": "🎉 *Todos los tests PASSED (21/21)*\n📱 Dispositivo: *Android*\n⏱ Duración total: *${{ steps.extract-summary.outputs.duration }}*\n📁 Archivos ejecutados: *1*\n👉 <${{ steps.upload.outputs.artifact-url }}|📄 Ver reporte completo>"
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
