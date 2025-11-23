@@ -35,7 +35,7 @@ if (start === -1 || end === -1) {
 // Extraer la parte relevante
 const relevantSection = raw.substring(start, end + 200);
 
-// Eliminar prefijos del nombre del dispositivo
+// Eliminar prefijos del dispositivo
 const cleanedSection = relevantSection.replace(/\[app-device-farm-[^\]]+\]\s*/g, '');
 
 // Fecha para el encabezado
@@ -46,22 +46,27 @@ const passingMatch = relevantSection.match(/(\d+)\s+passing\s+\(([\dms .]+)\)/);
 const totalPassed = passingMatch ? parseInt(passingMatch[1]) : 0;
 const duration = passingMatch ? passingMatch[2] : 'N/A';
 
-// Detectar posible cantidad de fallos (si hay en futuras ejecuciones)
+// Extraer cantidad de tests FAILED
 const failedMatch = relevantSection.match(/(\d+)\s+(?:failing|failed)/);
 const totalFailed = failedMatch ? parseInt(failedMatch[1]) : 0;
 
+// Extraer bloques de detalle de fallos
+const failedDetailsMatch = relevantSection.match(/(\d+)\s+(?:failing|failed)[\s\S]+?(?=(\d+\spassing|$))/);
+const failedDetails = failedDetailsMatch ? failedDetailsMatch[0] : null;
+
+// Extraer resumen de archivos
 const specMatch = relevantSection.match(/Spec Files:\s+(\d+)\s+passed.*in\s+([\d:]+)/);
 const specSummary = specMatch
   ? `📁 ${specMatch[1]} archivo/s OK — tiempo total ${specMatch[2]}`
   : 'Tiempo total no detectado';
 
-// Reemplazamos el encabezado por un placeholder para evitar que sea escapado
+// Preparación para evitar escape de negrita
 let formattedSection = cleanedSection.replace(
   /"spec"[\s\n\r]*Reporter:/,
-  '__REPORTE_PLACEHOLDER__'
+  `__REPORTE_PLACEHOLDER__`
 );
 
-// 🎨 Generar gráfico de torta con QuickChart (sin dependencias externas)
+// 🎨 Generar gráfico de torta
 function generarGrafico() {
   const chartConfig = {
     type: 'pie',
@@ -69,7 +74,7 @@ function generarGrafico() {
       labels: ['PASSED', 'FAILED'],
       datasets: [{
         data: [totalPassed, totalFailed],
-        backgroundColor: ['#28a745', '#dc3545'], // Verde / Rojo
+        backgroundColor: ['#28a745', '#dc3545'], // Verde y rojo
         hoverBackgroundColor: ['#28a745', '#dc3545'],
         borderColor: ['#ffffff', '#ffffff'],
         borderWidth: 2
@@ -95,17 +100,18 @@ function generarGrafico() {
 
 const graficoHTML = generarGrafico();
 
-// Aplicamos sanitización para evitar HTML no deseado
+// Aplicar sanitización y formato
 formattedSection = sanitize(formattedSection)
   .replace(/✓/g, '<span class="test-pass">✓</span>')
   .replace(/✗|x /g, '<span class="test-fail">✗</span>');
 
-// 🔥 Ahora reemplazamos el placeholder por negrita real SIN escapar
+// Reemplazo final sin sanear (para negrita)
 formattedSection = formattedSection.replace(
   '__REPORTE_PLACEHOLDER__',
   `<strong>Reporte – ${fechaHoy}</strong>`
 );
 
+// Armado HTML final
 const htmlReport = `
 <html>
 <head>
@@ -124,8 +130,8 @@ const htmlReport = `
 
   <div class="summary">
     ✔ ${totalPassed} tests PASSED en ${duration}<br/>
-    ${specSummary}<br/>
-    ${totalFailed > 0 ? `<span style="color:#dc3545;font-weight:bold;">🔴 ¡Se detectaron fallos!</span>` : ''}
+    ${totalFailed > 0 ? `❌ ${totalFailed} tests FAILED` : ''}<br/>
+    ${specSummary}
   </div>
 
   <h2>📊 Resumen visual</h2>
@@ -133,6 +139,13 @@ const htmlReport = `
 
   <h2>📌 Detalle de ejecución</h2>
   <div class="details">${formattedSection}</div>
+
+  ${totalFailed > 0 ? `
+    <h2 style="color:#dc3545;">❌ Detalle de los casos FAILED (${totalFailed})</h2>
+    <div class="details" style="border-left:5px solid #dc3545;">
+      ${sanitize(failedDetails)}
+    </div>
+  ` : ''}
 
   <p style="font-size:12px; color:#777;">Reporte generado automáticamente por GitHub Actions.</p>
 </body>
