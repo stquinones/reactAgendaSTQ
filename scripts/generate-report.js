@@ -11,7 +11,7 @@ const raw = fs.readFileSync(inputFile, 'utf8');
 const start = raw.indexOf('"spec" Reporter:');
 const end = raw.indexOf('Spec Files:');
 
-// Sanitizar caracteres especiales
+// Sanitizar caracteres peligrosos SIN romper HTML
 function sanitize(str) {
   return str.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
@@ -38,8 +38,8 @@ const relevantSection = raw.substring(start, end + 200);
 // Limpiamos prefijos como: [app-device-farm-atfsa__u.apk Android #0-0]
 const cleanedSection = relevantSection.replace(/\[app-device-farm-[^\]]+\]\s*/g, '');
 
-// Aplicamos formato visual (verde para ✓, rojo para ✗ o x)
-let formattedSection = cleanedSection
+// Primero sanitizamos para evitar XSS, después agregamos estilos visuales
+let formattedSection = sanitize(cleanedSection)
   .replace(/✓/g, '<span class="test-pass">✓</span>')
   .replace(/✗|x /g, '<span class="test-fail">✗</span>');
 
@@ -66,4 +66,23 @@ const htmlReport = `
     body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; background: #fafafa; color: #333; }
     .summary { background: #e8ffe6; border-left: 5px solid #56d466; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
     .tag { display: inline-block; background: #3cb043; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; }
-    .details { background: white; border-radius: 8px; border: 1px solid #ddd; padding: 20px; white-space:
+    .details { background: white; border-radius: 8px; border: 1px solid #ddd; padding: 20px; white-space: pre-wrap; font-size: 13px; line-height: 1.4; overflow-x: auto; }
+    .test-pass { color: #3CB043; font-weight: bold; }
+    .test-fail { color: #D72638; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h2>📄 Reporte de Automatización — AWS Device Farm</h2>
+  <div class="summary">
+    <span class="tag">PASSED ✔</span>
+    <p><strong>${summary}</strong></p>
+    <p>${specSummary}</p>
+  </div>
+  <h3>📌 Detalle de ejecución</h3>
+  <div class="details">${formattedSection}</div>
+</body>
+</html>
+`;
+
+fs.writeFileSync(outputFile, htmlReport);
+console.log("📄 Reporte HTML generado con éxito.");
