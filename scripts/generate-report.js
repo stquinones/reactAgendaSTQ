@@ -42,10 +42,12 @@ const cleanedSection = relevantSection.replace(/\[app-device-farm-[^\]]+\]\s*/g,
 const fechaHoy = new Date().toLocaleDateString('es-AR');
 
 // Reemplazo de encabezado ("spec" → Reporte con fecha)
-let formattedSection = cleanedSection.replace(/"spec"[\s\n\r]*Reporter:/, `Reporte – ${fechaHoy}`);
+let formattedSection = cleanedSection.replace(/"spec"[\s\n\r]*Reporter:/, `<strong>Reporte – ${fechaHoy}</strong>`);
 
 // Extraemos resumen de números
 const passingMatch = relevantSection.match(/(\d+)\s+passing\s+\(([\dms .]+)\)/);
+const failedMatch = relevantSection.match(/(\d+)\s+(?:failing|failed)/);
+const totalFailed = failedMatch ? parseInt(failedMatch[1]) : 0;
 const totalPassed = passingMatch ? parseInt(passingMatch[1]) : 0;
 const duration = passingMatch ? passingMatch[2] : 'N/A';
 
@@ -61,8 +63,8 @@ function generarGrafico() {
     data: {
       labels: ['PASSED', 'FAILED'],
      datasets: [{
-     data: [totalPassed, 0],
-     backgroundColor: ['#28a745', '#dc3545'], // Verde y rojo
+     data: [totalPassed, totalFailed],
+     backgroundColor: ['#28a745', '#dc3545'],
      borderColor: ['#ffffff', '#ffffff'], // Opcional: borde blanco
      borderWidth: 2
      }]
