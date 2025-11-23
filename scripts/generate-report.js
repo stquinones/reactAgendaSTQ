@@ -38,9 +38,15 @@ const relevantSection = raw.substring(start, end + 200);
 // Limpiamos prefijos como: [app-device-farm-atfsa__u.apk Android #0-0]
 const cleanedSection = relevantSection.replace(/\[app-device-farm-[^\]]+\]\s*/g, '');
 
-// Primero sanitizamos para evitar XSS, después agregamos estilos visuales
-let formattedSection = sanitize(cleanedSection)
-  .replace(/"spec"\s+Reporter:/, `Reporte – ${new Date().toLocaleDateString('es-AR')}`)
+const fechaHoy = new Date().toLocaleDateString('es-AR');
+
+// 1️⃣ Primero reemplazamos el encabezado ANTES de sanitizar
+let formattedSection = cleanedSection
+  .replace(/"spec"\s+Reporter:/, `Reporte – ${fechaHoy}`);
+
+// 2️⃣ Luego sanitizamos
+formattedSection = sanitize(formattedSection)
+  // 3️⃣ Y al final aplicamos formatos visuales
   .replace(/✓/g, '<span class="test-pass">✓</span>')
   .replace(/✗|x /g, '<span class="test-fail">✗</span>');
 
