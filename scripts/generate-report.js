@@ -11,12 +11,12 @@ const raw = fs.readFileSync(inputFile, 'utf8');
 const start = raw.indexOf('"spec" Reporter:');
 const end = raw.indexOf('Spec Files:');
 
-// Sanitizar caracteres especiales
+// Sanitizar caracteres especiales para evitar que rompan el HTML
 function sanitize(str) {
-  return str.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return str.replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-// Si no se encuentra la sección → crear HTML fallback
+// Si no se encuentra la sección -> mostrar fallback
 if (start === -1 || end === -1) {
   console.warn('⚠ No se encontró la sección del spec reporter.');
 
@@ -32,58 +32,80 @@ if (start === -1 || end === -1) {
   process.exit(0);
 }
 
-// Extraemos la sección relevante
+// Extraer la parte relevante
 const relevantSection = raw.substring(start, end + 200);
 
-// Limpiamos prefijos como: [app-device-farm-atfsa__u.apk Android #0-0]
+// Eliminar prefijos del nombre del dispositivo
 const cleanedSection = relevantSection.replace(/\[app-device-farm-[^\]]+\]\s*/g, '');
 
-// Detectamos fecha
+// Fecha para el encabezado
 const fechaHoy = new Date().toLocaleDateString('es-AR');
 
-// Reemplazo de encabezado ("spec" → Reporte con fecha)
-let formattedSection = cleanedSection.replace(/"spec"[\s\n\r]*Reporter:/, `<strong>Reporte – ${fechaHoy}</strong>`);
-
-// Extraemos resumen de números
+// Extraer número de tests PASSED
 const passingMatch = relevantSection.match(/(\d+)\s+passing\s+\(([\dms .]+)\)/);
-const failedMatch = relevantSection.match(/(\d+)\s+(?:failing|failed)/);
-const totalFailed = failedMatch ? parseInt(failedMatch[1]) : 0;
 const totalPassed = passingMatch ? parseInt(passingMatch[1]) : 0;
 const duration = passingMatch ? passingMatch[2] : 'N/A';
+
+// Detectar posible cantidad de fallos (si hay en futuras ejecuciones)
+const failedMatch = relevantSection.match(/(\d+)\s+(?:failing|failed)/);
+const totalFailed = failedMatch ? parseInt(failedMatch[1]) : 0;
 
 const specMatch = relevantSection.match(/Spec Files:\s+(\d+)\s+passed.*in\s+([\d:]+)/);
 const specSummary = specMatch
   ? `📁 ${specMatch[1]} archivo/s OK — tiempo total ${specMatch[2]}`
   : 'Tiempo total no detectado';
 
-// Función: generar gráfico de torta con QuickChart (sin librerías externas)
+// Reemplazamos el encabezado por un placeholder para evitar que sea escapado
+let formattedSection = cleanedSection.replace(
+  /"spec"[\s\n\r]*Reporter:/,
+  '__REPORTE_PLACEHOLDER__'
+);
+
+// 🎨 Generar gráfico de torta con QuickChart (sin dependencias externas)
 function generarGrafico() {
   const chartConfig = {
     type: 'pie',
     data: {
       labels: ['PASSED', 'FAILED'],
-     datasets: [{
-     data: [totalPassed, totalFailed],
-     backgroundColor: ['#28a745', '#dc3545'],
-     borderColor: ['#ffffff', '#ffffff'], // Opcional: borde blanco
-     borderWidth: 2
-     }]
+      datasets: [{
+        data: [totalPassed, totalFailed],
+        backgroundColor: ['#28a745', '#dc3545'], // Verde / Rojo
+        hoverBackgroundColor: ['#28a745', '#dc3545'],
+        borderColor: ['#ffffff', '#ffffff'],
+        borderWidth: 2
+      }]
+    },
+    options: {
+      plugins: {
+        legend: {
+          labels: {
+            usePointStyle: true
+          }
+        }
+      }
     }
   };
 
-  const quickChartURL = `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(chartConfig))}&format=png&width=400&height=400&backgroundColor=white`;
-
-  return `<img src="${quickChartURL}" alt="Resultados de Test" style="max-width: 300px; border-radius: 8px; box-shadow: 0px 3px 6px #ddd;">`;
+  return `<img src="https://quickchart.io/chart?c=${encodeURIComponent(
+    JSON.stringify(chartConfig)
+  )}&format=png&width=400&height=400&backgroundColor=white" 
+  alt="Resultados de Test" 
+  style="max-width: 300px; border-radius: 8px; box-shadow: 0px 3px 6px #ddd;">`;
 }
 
 const graficoHTML = generarGrafico();
 
-// Aplicamos formato visual verde/rojo y sanitización
+// Aplicamos sanitización para evitar HTML no deseado
 formattedSection = sanitize(formattedSection)
   .replace(/✓/g, '<span class="test-pass">✓</span>')
   .replace(/✗|x /g, '<span class="test-fail">✗</span>');
 
-// Armamos el HTML final
+// 🔥 Ahora reemplazamos el placeholder por negrita real SIN escapar
+formattedSection = formattedSection.replace(
+  '__REPORTE_PLACEHOLDER__',
+  `<strong>Reporte – ${fechaHoy}</strong>`
+);
+
 const htmlReport = `
 <html>
 <head>
@@ -92,8 +114,8 @@ const htmlReport = `
   <style>
     body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; background: #fafafa; color: #333; }
     .summary { background: #e8ffe6; border-left: 5px solid #56d466; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-    .test-pass { color: #149635; font-weight: bold; }
-    .test-fail { color: #961F14; font-weight: bold; }
+    .test-pass { color: #28a745; font-weight: bold; }
+    .test-fail { color: #dc3545; font-weight: bold; }
     .details { background: white; border-radius: 8px; border: 1px solid #ddd; padding: 20px; white-space: pre-wrap; }
   </style>
 </head>
@@ -102,7 +124,8 @@ const htmlReport = `
 
   <div class="summary">
     ✔ ${totalPassed} tests PASSED en ${duration}<br/>
-    ${specSummary}
+    ${specSummary}<br/>
+    ${totalFailed > 0 ? `<span style="color:#dc3545;font-weight:bold;">🔴 ¡Se detectaron fallos!</span>` : ''}
   </div>
 
   <h2>📊 Resumen visual</h2>
