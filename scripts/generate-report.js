@@ -40,6 +40,7 @@ const cleanedSection = relevantSection.replace(/\[app-device-farm-[^\]]+\]\s*/g,
 
 // Primero sanitizamos para evitar XSS, después agregamos estilos visuales
 let formattedSection = sanitize(cleanedSection)
+  .replace(/"spec"\s+Reporter:/, `Reporte – ${new Date().toLocaleDateString('es-AR')}`)
   .replace(/✓/g, '<span class="test-pass">✓</span>')
   .replace(/✗|x /g, '<span class="test-fail">✗</span>');
 
