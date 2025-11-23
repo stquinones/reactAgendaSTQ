@@ -25,9 +25,6 @@ jobs:
       - name: Instalar dependencias
         run: npm install
 
-      - name: Instalar libs para gráfico
-        run: npm install chart.js canvas chartjs-node-canvas  
-
       - name: Generar reporte HTML
         run: |
           node scripts/generate-report.js \
