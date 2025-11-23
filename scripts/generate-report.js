@@ -1,4 +1,5 @@
 const fs = require('fs');
+const { ChartJSNodeCanvas } = require('chartjs-node-canvas');
 
 // Entrada / salida
 const inputFile = process.argv[2];
@@ -11,7 +12,7 @@ const raw = fs.readFileSync(inputFile, 'utf8');
 const start = raw.indexOf('"spec" Reporter:');
 const end = raw.indexOf('Spec Files:');
 
-// Sanitizar caracteres peligrosos SIN romper HTML
+// Sanitizar caracteres especiales
 function sanitize(str) {
   return str.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
@@ -38,55 +39,82 @@ const relevantSection = raw.substring(start, end + 200);
 // Limpiamos prefijos como: [app-device-farm-atfsa__u.apk Android #0-0]
 const cleanedSection = relevantSection.replace(/\[app-device-farm-[^\]]+\]\s*/g, '');
 
+// Reemplazar encabezado por fecha actual
 const fechaHoy = new Date().toLocaleDateString('es-AR');
 
-let formattedSection = cleanedSection
-  .replace(/"spec"[\s\n\r]*Reporter:/, `Reporte – ${fechaHoy}`);
-
-formattedSection = sanitize(formattedSection)
-  .replace(/✓/g, '<span class="test-pass">✓</span>')
-  .replace(/✗|x /g, '<span class="test-fail">✗</span>');
-
-// Extraemos resumen de números
+// Detectar cantidad de tests pasados
 const passingMatch = relevantSection.match(/(\d+)\s+passing\s+\(([\dms .]+)\)/);
+const totalPassed = passingMatch ? parseInt(passingMatch[1]) : 0;
+const duration = passingMatch ? passingMatch[2] : 'N/A';
+
+// Detectar spec summary
 const specMatch = relevantSection.match(/Spec Files:\s+(\d+)\s+passed.*in\s+([\d:]+)/);
-
-// Si falla algo en extracción, no rompemos el script
-const summary = passingMatch
-  ? `✔ ${passingMatch[1]} tests PASSED en ${passingMatch[2]}`
-  : 'Resultado no detectado';
-
 const specSummary = specMatch
   ? `📁 ${specMatch[1]} archivo/s OK — tiempo total ${specMatch[2]}`
   : 'Tiempo total no detectado';
 
-// Armamos el HTML final
-const htmlReport = `
-<html>
-<head>
-  <meta charset="utf-8"/>
-  <title>Reporte Device Farm</title>
-  <style>
-    body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; background: #fafafa; color: #333; }
-    .summary { background: #e8ffe6; border-left: 5px solid #56d466; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-    .tag { display: inline-block; background: #3cb043; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; }
-    .details { background: white; border-radius: 8px; border: 1px solid #ddd; padding: 20px; white-space: pre-wrap; font-size: 13px; line-height: 1.4; overflow-x: auto; }
-    .test-pass { color: #3CB043; font-weight: bold; }
-    .test-fail { color: #D72638; font-weight: bold; }
-  </style>
-</head>
-<body>
-  <h2>📄 Reporte de Automatización — AWS Device Farm</h2>
-  <div class="summary">
-    <span class="tag">PASSED ✔</span>
-    <p><strong>${summary}</strong></p>
-    <p>${specSummary}</p>
-  </div>
-  <h3>📌 Detalle de ejecución</h3>
-  <div class="details">${formattedSection}</div>
-</body>
-</html>
-`;
+// Gráfico de torta
+async function generarGrafico() {
+  const width = 400;
+  const height = 400;
+  const chartJSNodeCanvas = new ChartJSNodeCanvas({ width, height });
 
-fs.writeFileSync(outputFile, htmlReport);
-console.log("📄 Reporte HTML generado con éxito.");
+  const config = {
+    type: 'pie',
+    data: {
+      labels: ['PASSED', 'FAILED'],
+      datasets: [{
+        data: [totalPassed, 0] // Si detectamos fallos en el futuro, se reemplaza
+      }]
+    }
+  };
+  return await chartJSNodeCanvas.renderToDataURL(config);
+}
+
+(async () => {
+  const graficoBase64 = await generarGrafico();
+
+  let formattedSection = cleanedSection
+    .replace(/"spec"[\s\n\r]*Reporter:/, `Reporte – ${fechaHoy}`);
+
+  formattedSection = sanitize(formattedSection)
+    .replace(/✓/g, '<span class="test-pass">✓</span>')
+    .replace(/✗|x /g, '<span class="test-fail">✗</span>');
+
+  // Armamos el HTML final
+  const htmlReport = `
+  <html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>Reporte Device Farm</title>
+    <style>
+      body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; background: #fafafa; color: #333; }
+      .summary { background: #e8ffe6; border-left: 5px solid #56d466; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+      .test-pass { color: #3cb043; font-weight: bold; }
+      .test-fail { color: #e60000; font-weight: bold; }
+      .details { background: white; border-radius: 8px; border: 1px solid #ddd; padding: 20px; white-space: pre-wrap; }
+      img { max-width: 300px; margin-top: 10px; border-radius: 8px; box-shadow: 0px 3px 6px #ddd; }
+    </style>
+  </head>
+  <body>
+    <h1>📄 Reporte de Automatización — AWS Device Farm</h1>
+
+    <div class="summary">
+      ✔ ${totalPassed} tests PASSED en ${duration}<br/>
+      ${specSummary}
+    </div>
+
+    <h2>📊 Resumen visual</h2>
+    <img src="${graficoBase64}" alt="Resultados de Test"/>
+
+    <h2>📌 Detalle de ejecución</h2>
+    <div class="details">${formattedSection}</div>
+
+    <p style="font-size:12px; color:#777;">Reporte generado automáticamente por GitHub Actions.</p>
+  </body>
+  </html>
+  `;
+
+  fs.writeFileSync(outputFile, htmlReport);
+  console.log('📄 Reporte generado correctamente');
+})();
