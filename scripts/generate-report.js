@@ -11,59 +11,57 @@ const raw = fs.readFileSync(inputFile, 'utf8');
 const start = raw.indexOf('"spec" Reporter:');
 const end = raw.indexOf('Spec Files:');
 
-// Sanitizar caracteres especiales para evitar que rompan el HTML
+// Sanitizar HTML
 function sanitize(str) {
   return str.replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-// Si no se encuentra la sección -> mostrar fallback
+// Si no se encuentra la sección
 if (start === -1 || end === -1) {
   console.warn('⚠ No se encontró la sección del spec reporter.');
-
   const fallbackHtml = `
   <html>
   <head><meta charset="utf-8"/><title>Reporte Device Farm</title></head>
   <body style="font-family: Arial; padding: 20px;">
     <h2>⚠ No se detectaron resultados de ejecución</h2>
-    <p>Verificá que el archivo <code>device-farm-output.txt</code> contenga la sección <strong>"spec" Reporter:</strong>.</p>
   </body>
   </html>`;
   fs.writeFileSync(outputFile, fallbackHtml);
   process.exit(0);
 }
 
-// Extraer sección relevante
+// Extraer el bloque relevante
 const relevantSection = raw.substring(start, end + 200);
 
-// Limpiar prefijos del dispositivo
+// Limpiar prefijos de dispositivo
 const cleanedSection = relevantSection.replace(/\[app-device-farm-[^\]]+\]\s*/g, '');
 
-// Fecha actual
+// Fecha
 const fechaHoy = new Date().toLocaleDateString('es-AR');
 
-// Extraer Passed
+// Extraer PASSED
 const passingMatch = relevantSection.match(/(\d+)\s+passing\s+\(([\dms .]+)\)/);
 const totalPassed = passingMatch ? parseInt(passingMatch[1]) : 0;
 const duration = passingMatch ? passingMatch[2] : 'N/A';
 
-// Extraer Failed
+// Extraer FAILED
 const failedMatch = relevantSection.match(/(\d+)\s+(?:failing|failed)/);
 const totalFailed = failedMatch ? parseInt(failedMatch[1]) : 0;
 
-// Extraer archivos ejecutados y duración total correctamente
+// Extraer archivos totales y tiempo
 const specMatch = relevantSection.match(/Spec Files:.*?(\d+)\s+total.*?in\s+([\d:]+)/);
 const specSummary = specMatch
   ? `📁 ${specMatch[1]} archivo/s — tiempo total ${specMatch[2]}`
   : 'Tiempo total no detectado';
 
-// Preparación para evitar escape
+// Preparación inicial
 let formattedSection = cleanedSection.replace(
   /"spec"[\s\n\r]*Reporter:/,
   `__REPORTE_PLACEHOLDER__`
 );
 
-// 🎨 Gráfico de torta
-function generarGrafico() {
+// Generar gráfico
+const graficoHTML = (() => {
   const chartConfig = {
     type: 'pie',
     data: {
@@ -71,37 +69,26 @@ function generarGrafico() {
       datasets: [{
         data: [totalPassed, totalFailed],
         backgroundColor: ['#28a745', '#dc3545'], // Verde y rojo
-        hoverBackgroundColor: ['#28a745', '#dc3545'],
         borderColor: ['#ffffff', '#ffffff'],
         borderWidth: 2
       }]
     },
-    options: {
-      plugins: {
-        legend: {
-          labels: {
-            usePointStyle: true
-          }
-        }
-      }
-    }
+    options: { plugins: { legend: { labels: { usePointStyle: true } } } }
   };
 
   return `<img src="https://quickchart.io/chart?c=${encodeURIComponent(
     JSON.stringify(chartConfig)
-  )}&format=png&width=400&height=400&backgroundColor=white"
-  alt="Resultados de Test"
+  )}&format=png&width=400&height=400&backgroundColor=white" 
+  alt="Resultados de Test" 
   style="max-width: 300px; border-radius: 8px; box-shadow: 0px 3px 6px #ddd;">`;
-}
+})();
 
-const graficoHTML = generarGrafico();
-
-// Aplicar formato visual
+// Formato visual
 formattedSection = sanitize(formattedSection)
   .replace(/✓/g, '<span class="test-pass">✓</span>')
   .replace(/✗|x /g, '<span class="test-fail">✗</span>');
 
-// Insertar título de fallo luego de "XX failing"
+// Insertar título de fallos en el lugar correcto
 if (totalFailed > 0) {
   formattedSection = formattedSection.replace(
     /(\d+)\s+(?:failing|failed)/,
@@ -111,11 +98,11 @@ if (totalFailed > 0) {
 
 // Reemplazo final de encabezado
 formattedSection = formattedSection.replace(
-  '__REPORTE_PLACEHOLDER__',
+  `__REPORTE_PLACEHOLDER__`,
   `<strong>Reporte – ${fechaHoy}</strong>`
 );
 
-// Armado del HTML final
+// HTML final
 const htmlReport = `
 <html>
 <head>
@@ -123,7 +110,7 @@ const htmlReport = `
   <title>Reporte Device Farm</title>
   <style>
     body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; background: #fafafa; color: #333; }
-    .summary { background: #ffe8e8; border-left: 5px solid #dc3545; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+    .summary { background: ${totalFailed > 0 ? '#ffe8e8' : '#e8ffe6'}; border-left: 5px solid ${totalFailed > 0 ? '#dc3545' : '#28a745'}; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
     .test-pass { color: #28a745; font-weight: bold; }
     .test-fail { color: #dc3545; font-weight: bold; }
     .details { background: white; border-radius: 8px; border: 1px solid #ddd; padding: 20px; white-space: pre-wrap; }
@@ -134,9 +121,9 @@ const htmlReport = `
   <h2><strong>Reporte – ${fechaHoy}</strong></h2>
 
   <div class="summary">
-    ✔ ${totalPassed} tests PASSED en ${duration}<br/>
-    ${totalFailed > 0 ? `❌ ${totalFailed} tests FAILED` : ''}
-    <br/>${specSummary}
+    <span style="color:#28a745;">✔ ${totalPassed} tests PASSED</span><br/>
+    ${totalFailed > 0 ? `<span style="color:#dc3545;">❌ ${totalFailed} tests FAILED</span><br/>` : ''}
+    ${specSummary}
   </div>
 
   <h2>📊 Resumen visual</h2>
