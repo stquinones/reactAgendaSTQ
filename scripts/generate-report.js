@@ -50,10 +50,10 @@ const duration = passingMatch ? passingMatch[2] : 'N/A';
 const failedMatch = relevantSection.match(/(\d+)\s+(?:failing|failed)/);
 const totalFailed = failedMatch ? parseInt(failedMatch[1]) : 0;
 
-// Extraer resumen archivo
-const specMatch = relevantSection.match(/Spec Files:\s+(\d+)\s+passed.*in\s+([\d:]+)/);
+// Extraer archivos ejecutados y duración total correctamente
+const specMatch = relevantSection.match(/Spec Files:.*?(\d+)\s+total.*?in\s+([\d:]+)/);
 const specSummary = specMatch
-  ? `📁 ${specMatch[1]} archivo/s OK — tiempo total ${specMatch[2]}`
+  ? `📁 ${specMatch[1]} archivo/s — tiempo total ${specMatch[2]}`
   : 'Tiempo total no detectado';
 
 // Preparación para evitar escape
