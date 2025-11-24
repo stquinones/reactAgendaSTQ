@@ -47,4 +47,4 @@ jobs:
               "text": "🎉 *Todos los tests PASSED (21/21)*\n📱 Dispositivo: *Android*\n⏱ Duración total: *${{ steps.extract-summary.outputs.duration }}*\n📁 Archivos ejecutados: *1*\n👉 <${{ steps.upload.outputs.artifact-url }}|📄 Ver reporte completo>"
             }
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }} 
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
