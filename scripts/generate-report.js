@@ -86,7 +86,7 @@ const graficoHTML = (() => {
 // Formato visual
 formattedSection = sanitize(formattedSection)
   .replace(/✓/g, '<span class="test-pass">✓</span>')
-  .replace(/✗|x /g, '<span class="test-fail">✗</span>');
+  .replace(/✗|✖|x /g, '<span class="test-fail">✖</span>');
 
 // Insertar título de fallos en el lugar correcto
 if (totalFailed > 0) {
