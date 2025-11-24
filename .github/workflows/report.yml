@@ -44,8 +44,15 @@ jobs:
           payload: |
             {
               "channel": "#prueba-app",
-              "text": "🎉 *Todos los tests PASSED (21/21)*\n📱 Dispositivo: *Android*\n⏱ Duración total: *${{ steps.extract-summary.outputs.duration }}*\n📁 Archivos ejecutados: *1*\n👉 <${{ steps.upload.outputs.artifact-url }}|📄 Ver reporte completo>"
-            }
+              "text": "${
+                { totalFailed > 0 ?
+                  `🚨 *Resultados: ${totalPassed}/${totalPassed + totalFailed} PASSED - ${totalFailed} FAILED*` :
+                  `🎉 *Todos los tests PASSED (${totalPassed}/${totalPassed})*`
+                }\n
+                📱 *Dispositivo:* Android\n
+                ⏱️ *Duración total:* ${duration}\n
+                📁 *Archivos ejecutados:* ${specFilesCount}\n
+                📎 <${{ steps.upload.outputs.artifact-url }}|*Ver reporte completo*>
+              }"
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          
