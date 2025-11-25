@@ -26,10 +26,11 @@ jobs:
         run: npm install
 
       - name: Generar reporte HTML
+        id: generate-report
         run: |
           node scripts/generate-report.js \
-            reports/devicefarm-log.txt \
-            reports/devicefarm-report.html
+          reports/devicefarm-log.txt \
+          reports/devicefarm-report.html
 
       - name: Subir artefacto del reporte
         id: upload
@@ -41,9 +42,12 @@ jobs:
       - name: Guardar variables para Slack
         id: vars
         run: |
-          echo "text=${{ steps.generate-report.outputs.SLACK_TEXT }}" >> $GITHUB_OUTPUT
-          echo "dur=${{ steps.generate-report.outputs.DURATION }}" >> $GITHUB_OUTPUT
-          echo "files=${{ steps.generate-report.outputs.FILECOUNT }}" >> $GITHUB_OUTPUT
+            text=$(node -e "fs=require('fs');console.log(JSON.parse(fs.readFileSync('reports/json-data.json','utf8')).text || 'N/A')")
+            dur=$(node -e "fs=require('fs');console.log(JSON.parse(fs.readFileSync('reports/json-data.json','utf8')).duration || 'N/A')")
+            files=$(node -e "fs=require('fs');console.log(JSON.parse(fs.readFileSync('reports/json-data.json','utf8')).files || 'N/A')")
+            echo "text=$text" >> $GITHUB_OUTPUT
+            echo "dur=$dur" >> $GITHUB_OUTPUT
+            echo "files=$files" >> $GITHUB_OUTPUT
 
       - name: Enviar link del reporte a Slack
         uses: slackapi/slack-github-action@v1.27.0
@@ -55,4 +59,3 @@ jobs:
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
