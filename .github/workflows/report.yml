@@ -39,20 +39,13 @@ jobs:
           name: devicefarm-report
           path: reports/devicefarm-report.html
 
-      - name: Guardar variables para Slack
-        id: vars
-        run: |
-            echo "text=$text" >> $GITHUB_OUTPUT
-            echo "dur=$dur" >> $GITHUB_OUTPUT
-            echo "files=$files" >> $GITHUB_OUTPUT
-
       - name: Enviar link del reporte a Slack
         uses: slackapi/slack-github-action@v1.27.0
         with:
-          payload: |
-            {
-              "channel": "#prueba-app",
-              "text": "*${{ steps.vars.outputs.text }}*\n\n📱 Dispositivo: Android\n⏱️ Duración total: ${{ steps.vars.outputs.dur }}\n📁 Archivos ejecutados: ${{ steps.vars.outputs.files }}\n👉 <${{ steps.upload.outputs.artifact-url }}|*Ver reporte completo*>"
-            }
+         payload: |
+          {
+            "channel": "#prueba-app",
+            "text": "*${{ steps.generate-report.outputs.SLACK_TEXT }}*\n\n📱 Dispositivo: Android\n⏱️ Duración total: ${{ steps.generate-report.outputs.DURATION }}\n📁 Archivos ejecutados: ${{ steps.generate-report.outputs.FILECOUNT }}\n👉 <${{ steps.upload.outputs.artifact-url }}|*Ver reporte completo*>"
+          }
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
