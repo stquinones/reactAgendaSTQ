@@ -42,10 +42,13 @@ const totalPassed = passingMatch ? parseInt(passingMatch[1]) : 0;
 const failedMatch = relevantSection.match(/(\d+)\s+failing/);
 const totalFailed = failedMatch ? parseInt(failedMatch[1]) : 0;
 
-// Extraer cantidad de archivos ejecutados y tiempo total
-const specMatch = relevantSection.match(/Spec Files:\s+(?:\d+)\s+(?:passed|failed),*\s+(\d+)\s+total.*in\s+([\d:]+)/);
-const specFilesCount = specMatch ? parseInt(specMatch[1]) : 1;
-const totalTime = specMatch ? specMatch[2] : 'N/A';
+// Extraer número de archivos ejecutados
+const specFilesMatch = relevantSection.match(/Spec Files:\s+.*?(\d+)\s+total/);
+const specFilesCount = specFilesMatch ? parseInt(specFilesMatch[1]) : 'N/A';
+
+// Extraer tiempo total
+const durationMatch = relevantSection.match(/in\s+([\d:]+)/);
+const totalTime = durationMatch ? durationMatch[1] : 'N/A';
 
 // Reemplazar título de reporte
 let formattedSection = cleanedSection.replace(
