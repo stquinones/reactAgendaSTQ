@@ -42,9 +42,6 @@ jobs:
       - name: Guardar variables para Slack
         id: vars
         run: |
-            text=$(node -e "fs=require('fs');console.log(JSON.parse(fs.readFileSync('reports/json-data.json','utf8')).text || 'N/A')")
-            dur=$(node -e "fs=require('fs');console.log(JSON.parse(fs.readFileSync('reports/json-data.json','utf8')).duration || 'N/A')")
-            files=$(node -e "fs=require('fs');console.log(JSON.parse(fs.readFileSync('reports/json-data.json','utf8')).files || 'N/A')")
             echo "text=$text" >> $GITHUB_OUTPUT
             echo "dur=$dur" >> $GITHUB_OUTPUT
             echo "files=$files" >> $GITHUB_OUTPUT
