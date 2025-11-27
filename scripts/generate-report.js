@@ -51,16 +51,15 @@ const totalTime = durationMatch ? durationMatch[1] : 'N/A';
 
 // Reemplazar título
 let formattedSection = cleanedSection.replace(
-  /"spec"[\s\n\r]*Reporter:[\s\n\r]*/,   // eliminamos also el salto extra
+  /"spec"[\s\n\r]*Reporter:[\s\n\r]*/,   
   `__REPORTE_PLACEHOLDER__`
 );
 
-// Aplicamos sanitización pero respetando el título
 formattedSection = sanitize(formattedSection)
-  .replace(/__REPORTE_PLACEHOLDER__/, `<strong>Reporte – ${fechaHoy}</strong>`)
+  .replace(/__REPORTE_PLACEHOLDER__/, `<strong>Reporte – ${fechaHoy}</strong><br/>`)  // 👈 acá el salto limpio
   .replace(/✓/g, '<span style="color:#28a745; font-weight:bold;">✓</span>')
   .replace(/✖|x /g, '<span style="color:#dc3545; font-weight:bold;">✖</span>')
-  .replace(/\n/g, '<br/>'); // Recuperamos formato visual
+  .replace(/\n/g, '<br/>');
 
 // Gráfico de torta
 const graficoHTML = `
