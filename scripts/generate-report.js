@@ -51,13 +51,13 @@ const totalTime = durationMatch ? durationMatch[1] : 'N/A';
 
 // Reemplazar título
 let formattedSection = cleanedSection.replace(
-  /"spec"[\s\n\r]*Reporter:/,
+  /"spec"[\s\n\r]*Reporter:[\s\n\r]*/,   // eliminamos also el salto extra
   `__REPORTE_PLACEHOLDER__`
 );
 
 // Aplicamos sanitización pero respetando el título
 formattedSection = sanitize(formattedSection)
-  .replace(/__REPORTE_PLACEHOLDER__/, `<strong>Reporte – ${fechaHoy}</strong><br/>`)
+  .replace(/__REPORTE_PLACEHOLDER__/, `<strong>Reporte – ${fechaHoy}</strong>`)
   .replace(/✓/g, '<span style="color:#28a745; font-weight:bold;">✓</span>')
   .replace(/✖|x /g, '<span style="color:#dc3545; font-weight:bold;">✖</span>')
   .replace(/\n/g, '<br/>'); // Recuperamos formato visual
