@@ -1,73 +1,117 @@
 const fs = require('fs');
-const { ChartJSNodeCanvas } = require('chartjs-node-canvas');
 
-// 📊 DATOS DEL GRÁFICO
-const passed = 10;
-const failed = 11;
+// Entrada / salida
+const inputFile = process.argv[2];
+const outputFile = process.argv[3];
 
-const data = {
-  labels: ['PASSED', 'FAILED'],
-  datasets: [
-    {
-      data: [passed, failed],
-      backgroundColor: ['#28A745', '#DC3545'], // verde y rojo
-    },
-  ],
-};
+// Leer archivo completo
+const raw = fs.readFileSync(inputFile, 'utf8');
 
-// 🖼️ Ajustes de tamaño controlado
-const width = 400;
-const height = 400;
-const chartJSNodeCanvas = new ChartJSNodeCanvas({ width, height });
+// Buscar sección de resultados
+const start = raw.indexOf('"spec" Reporter:');
+const end = raw.indexOf('Spec Files:');
 
-async function generateChart() {
-  const configuration = {
-    type: 'pie',
-    data,
-    options: {
-      responsive: false, // ⚠️ IMPORTANTE para no expandir
-      maintainAspectRatio: true,
-      plugins: {
-        legend: {
-          position: 'top',
-          labels: { font: { size: 14 } },
-        },
-      },
-    },
-  };
-  return await chartJSNodeCanvas.renderToBuffer(configuration);
+// Sanitizar caracteres especiales HTML
+function sanitize(str) {
+  return str.replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-(async () => {
-  // 🧹 Limpieza del detalle
-  let rawExecutionDetails = fs.readFileSync('report/raw_details.txt', 'utf8');
-  const cleanDetails = rawExecutionDetails.replace(/Timeout Error: [^\n]+/g, '⏱ Timeout en acción');
+if (start === -1 || end === -1) {
+  console.warn('⚠ No se encontró la sección del spec reporter.');
+  fs.writeFileSync(outputFile, `
+    <html><body><h2>No se detectaron resultados.</h2></body></html>
+  `);
+  process.exit(0);
+}
 
-  // 🎨 Generar imagen
-  const image = await generateChart();
-  fs.writeFileSync('report/chart.png', image);
+// Extraer log relevante
+const relevantSection = raw.substring(start, end + 200);
 
-  // 📅 Timestamp
-  const date = new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
+// Quitar prefijos del dispositivo
+const cleanedSection = relevantSection.replace(/\[app-device-farm-[^\]]+\]\s*/g, '');
 
-  // 📎 Texto para Slack
-  const slackText = `
-📌 *Resumen de ejecución – ${date}*
+// Fecha
+const fechaHoy = new Date().toLocaleDateString('es-AR');
 
-:bar_chart: *11 FAILED — 10 PASSED*
-:iphone: *Dispositivo:* Android
-:stopwatch: *Duración total:* 13m 39s
-:file_folder: Archivos ejecutados: 1
-:paperclip: *Ver reporte completo adjunto*
+// Extraer PASSED
+const passingMatch = relevantSection.match(/(\d+)\s+passing\s+\(([\dms .]+)\)/);
+const totalPassed = passingMatch ? parseInt(passingMatch[1]) : 0;
 
--------------------------
+// Extraer FAILED
+const failedMatch = relevantSection.match(/(\d+)\s+failing/);
+const totalFailed = failedMatch ? parseInt(failedMatch[1]) : 0;
 
-🧪 *Detalle simplificado:*
-${cleanDetails}
+// Extraer cantidad de archivos ejecutados
+const specFilesMatch = relevantSection.match(/Spec Files:\s+.*?(\d+)\s+total/);
+const specFilesCount = specFilesMatch ? parseInt(specFilesMatch[1]) : 'N/A';
+
+// Extraer duración total
+const durationMatch = relevantSection.match(/in\s+([\d:]+)/);
+const totalTime = durationMatch ? durationMatch[1] : 'N/A';
+
+// Reemplazar título
+let formattedSection = cleanedSection.replace(
+  /"spec"[\s\n\r]*Reporter:/,
+  `<strong>Reporte – ${fechaHoy}</strong>`
+);
+
+// Colorear ✓ y ✖
+formattedSection = sanitize(formattedSection)
+  .replace(/✓/g, '<span style="color:#28a745; font-weight:bold;">✓</span>')
+  .replace(/✖|x /g, '<span style="color:#dc3545; font-weight:bold;">✖</span>');
+
+// Gráfico de torta
+const graficoHTML = `
+<img src="https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify({
+  type: 'pie',
+  data: {
+    labels: ['PASSED', 'FAILED'],
+    datasets: [{
+      data: [totalPassed, totalFailed],
+      backgroundColor: ['#28a745', '#dc3545']
+    }]
+  }
+}))}&width=400&height=400&format=png" alt="Chart">
 `;
 
-  // 📤 Guardar texto en archivo para usar en el workflow
-  fs.writeFileSync('report/slack_message.txt', slackText);
+// HTML final
+const htmlReport = `
+<html>
+<head>
+  <meta charset="utf-8"/>
+</head>
+<body style="font-family: Arial; padding: 20px;">
+  <h1>📄 Reporte de Automatización — AWS Device Farm</h1>
+  <div style="background:#e8ffe6; padding:15px; border-left:5px solid #28a745;">
+    ✔ ${totalPassed} tests PASSED<br/>
+    ❌ ${totalFailed} tests FAILED<br/>
+    📁 ${specFilesCount} archivo/s — tiempo total ${totalTime}
+  </div>
 
-  console.log('Reporte generado correctamente ✔️');
-})();
+  <h2>📊 Resumen visual</h2>
+  ${graficoHTML}
+
+  <h2>📌 Detalle de ejecución</h2>
+  <div style="background:white; padding:20px; border:1px solid #ccc;">
+    ${formattedSection}
+  </div>
+
+  <p style="font-size:12px; color:#777;">Reporte generado automáticamente por GitHub Actions.</p>
+</body>
+</html>
+`;
+
+fs.writeFileSync(outputFile, htmlReport);
+
+// 📦 Exportar valores para Slack
+const slackText = totalFailed > 0
+  ? `🚨 Resultados: ${totalPassed}/${totalPassed + totalFailed} PASSED – ${totalFailed} FAILED`
+  : `🎉 Todos los tests PASSED (${totalPassed}/${totalPassed})`;
+
+if (process.env.GITHUB_OUTPUT) {
+  fs.appendFileSync(process.env.GITHUB_OUTPUT, `SLACK_TEXT=${slackText}\n`);
+  fs.appendFileSync(process.env.GITHUB_OUTPUT, `DURATION=${totalTime}\n`);
+  fs.appendFileSync(process.env.GITHUB_OUTPUT, `FILECOUNT=${specFilesCount}\n`);
+}
+
+console.log('📄 Reporte generado correctamente');
