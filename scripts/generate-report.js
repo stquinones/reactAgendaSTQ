@@ -52,13 +52,15 @@ const totalTime = durationMatch ? durationMatch[1] : 'N/A';
 // Reemplazar título
 let formattedSection = cleanedSection.replace(
   /"spec"[\s\n\r]*Reporter:/,
-  `<strong>Reporte – ${fechaHoy}</strong>`
+  `__REPORTE_PLACEHOLDER__`
 );
 
-// Colorear ✓ y ✖
+// Aplicamos sanitización pero respetando el título
 formattedSection = sanitize(formattedSection)
+  .replace(/__REPORTE_PLACEHOLDER__/, `<strong>Reporte – ${fechaHoy}</strong><br/><br/>`)
   .replace(/✓/g, '<span style="color:#28a745; font-weight:bold;">✓</span>')
-  .replace(/✖|x /g, '<span style="color:#dc3545; font-weight:bold;">✖</span>');
+  .replace(/✖|x /g, '<span style="color:#dc3545; font-weight:bold;">✖</span>')
+  .replace(/\n/g, '<br/>'); // Recuperamos formato visual
 
 // Gráfico de torta
 const graficoHTML = `
