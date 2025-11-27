@@ -25,6 +25,7 @@ jobs:
       - name: Instalar dependencias
         run: npm install
 
+      # 🧾 Paso original que genera el HTML
       - name: Generar reporte HTML
         id: generate-report
         run: |
@@ -32,20 +33,31 @@ jobs:
           reports/devicefarm-log.txt \
           reports/devicefarm-report.html
 
+      # 🎨 Nuevo paso: generar imagen + texto limpio para Slack
+      - name: Generar gráfico y mensaje Slack
+        run: |
+          node scripts/report.js  # Este es el nuevo archivo que armamos
+          echo "SLACK_TEXT<<EOF" >> $GITHUB_ENV
+          cat report/slack_message.txt >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
       - name: Subir artefacto del reporte
         id: upload
         uses: actions/upload-artifact@v4
         with:
           name: devicefarm-report
-          path: reports/devicefarm-report.html
+          path: |
+            reports/devicefarm-report.html
+            report/chart.png  # 🔥 también subimos el gráfico
 
+      # 📲 Enviar resumen a Slack sin romper formato
       - name: Enviar link del reporte a Slack
         uses: slackapi/slack-github-action@v1.27.0
         with:
-         payload: |
-          {
-            "channel": "#prueba-app",
-            "text": "*${{ steps.generate-report.outputs.SLACK_TEXT }}*\n\n📱 Dispositivo: Android\n⏱️ Duración total: ${{ steps.generate-report.outputs.DURATION }}\n📁 Archivos ejecutados: ${{ steps.generate-report.outputs.FILECOUNT }}\n👉 <${{ steps.upload.outputs.artifact-url }}|*Ver reporte completo*>"
-          }
+          payload: |
+            {
+              "channel": "#prueba-app",
+              "text": "${{ env.SLACK_TEXT }}\n👉 <${{ steps.upload.outputs.artifact-url }}|*Ver reporte completo*>"
+            }
         env:
-         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
