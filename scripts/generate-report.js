@@ -70,10 +70,21 @@ const graficoHTML = `
     labels: ['PASSED', 'FAILED'],
     datasets: [{
       data: [totalPassed, totalFailed],
-      backgroundColor: ['#28a745', '#dc3545']
+      backgroundColor: ['#28a745', '#dc3545'],
+      borderColor: ['#ffffff', '#ffffff'],
+      borderWidth: 2
     }]
   }
-}))}&width=400&height=400&format=png" alt="Chart">
+}))}&width=300&height=300&format=png"
+alt="Resultados de Test"
+style="
+  max-width: 300px;
+  display: block;
+  margin: 20px auto;
+  border-radius: 8px;
+  box-shadow: 0px 3px 6px rgba(0,0,0,0.15);
+"
+/>
 `;
 
 // HTML final
