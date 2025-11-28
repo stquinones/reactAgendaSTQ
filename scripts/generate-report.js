@@ -56,10 +56,12 @@ let formattedSection = cleanedSection.replace(
 );
 
 formattedSection = sanitize(formattedSection)
-  .replace(/__REPORTE_PLACEHOLDER__/, `<strong>Reporte – ${fechaHoy}</strong><br/>`)  // 👈 acá el salto limpio
+  .replace(/__REPORTE_PLACEHOLDER__/, `<strong>Reporte – ${fechaHoy}</strong><br/>`)
   .replace(/✓/g, '<span style="color:#28a745; font-weight:bold;">✓</span>')
   .replace(/✖|x /g, '<span style="color:#dc3545; font-weight:bold;">✖</span>')
-  .replace(/\n/g, '<br/>');
+  // ⬇️ nueva línea: luego de "XX failing" agregamos título
+  .replace(/(\d+\s+failing)/, `$1<br/><strong style="color:#dc3545;">📌 Detalle de los casos FAILED</strong>`)
+  .replace(/\n/g, '<br/>'); // Conservamos saltos
 
 // Gráfico de torta
 const graficoHTML = `
