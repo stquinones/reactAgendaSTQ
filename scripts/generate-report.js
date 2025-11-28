@@ -60,7 +60,7 @@ formattedSection = sanitize(formattedSection)
   .replace(/✓/g, '<span style="color:#28a745; font-weight:bold;">✓</span>')
   .replace(/✖|x /g, '<span style="color:#dc3545; font-weight:bold;">✖</span>')
   // ⬇️ nueva línea: luego de "XX failing" agregamos título
-  .replace(/(\d+\s+failing)/, `$1<br/><strong style="color:#dc3545;">📌 Detalle de los casos FAILED</strong>`)
+  .replace(/(\d+\s+failing)/, `$1<br/><strong style="color:#121111;">📌 Detalle de los casos FAILED</strong>`)
   .replace(/\n/g, '<br/>'); // Conservamos saltos
 
 // Gráfico de torta
