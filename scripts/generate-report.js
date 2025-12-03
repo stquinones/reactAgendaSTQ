@@ -119,8 +119,8 @@ fs.writeFileSync(outputFile, htmlReport);
 
 // 📦 Exportar valores para Slack
 const slackText = totalFailed > 0
-  ? `🚨 Resultados: ${totalPassed}/${totalPassed + totalFailed} PASSED – ${totalFailed} FAILED`
-  : `🎉 Todos los tests PASSED (${totalPassed}/${totalPassed})`;
+  ? `🚨 Resultados: ${totalPassed} PASSED – ${totalFailed} FAILED`
+  : `🎉 Todos los tests PASSED (${totalPassed})`;
 
 if (process.env.GITHUB_OUTPUT) {
   fs.appendFileSync(process.env.GITHUB_OUTPUT, `SLACK_TEXT=${slackText}\n`);
