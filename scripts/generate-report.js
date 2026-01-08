@@ -8,8 +8,27 @@ const outputFile = process.argv[3];
 const raw = fs.readFileSync(inputFile, 'utf8');
 
 // Buscar sección de resultados
+//const start = raw.indexOf('"spec" Reporter:');
+//const end = raw.indexOf('Spec Files:');
 const start = raw.indexOf('"spec" Reporter:');
-const end = raw.indexOf('Spec Files:');
+
+if (start === -1) {
+  console.warn('⚠ No se encontró el inicio del spec reporter.');
+  fs.writeFileSync(outputFile, `
+    <html><body><h2>No se detectaron resultados.</h2></body></html>
+  `);
+  process.exit(0);
+}
+
+// ⬇️ IGNORA TODO LO ANTERIOR
+const relevantSection = raw.substring(start);
+
+// Buscamos el final dentro del nuevo bloque
+const end = relevantSection.indexOf('Spec Files:');
+
+const finalSection = end !== -1
+  ? relevantSection.substring(0, end + 200)
+  : relevantSection;
 
 // Sanitizar caracteres especiales HTML
 function sanitize(str) {
@@ -28,25 +47,25 @@ if (start === -1 || end === -1) {
 const relevantSection = raw.substring(start, end + 200);
 
 // Quitar prefijos del dispositivo
-const cleanedSection = relevantSection.replace(/\[app-device-farm-[^\]]+\]\s*/g, '');
+const cleanedSection = finalSection.replace(/\[app-device-farm-[^\]]+\]\s*/g, '');
 
 // Fecha
 const fechaHoy = new Date().toLocaleDateString('es-AR');
 
 // Extraer PASSED
-const passingMatch = relevantSection.match(/(\d+)\s+passing\s+\(([\dms .]+)\)/);
+const passingMatch = finalSection.match(/(\d+)\s+passing\s+\(([\dms .]+)\)/);
 const totalPassed = passingMatch ? parseInt(passingMatch[1]) : 0;
 
 // Extraer FAILED
-const failedMatch = relevantSection.match(/(\d+)\s+failing/);
+const failedMatch = finalSection.match(/(\d+)\s+failing/);
 const totalFailed = failedMatch ? parseInt(failedMatch[1]) : 0;
 
 // Extraer cantidad de archivos ejecutados
-const specFilesMatch = relevantSection.match(/Spec Files:\s+.*?(\d+)\s+total/);
+const specFilesMatch = finalSection.match(/Spec Files:\s+.*?(\d+)\s+total/);
 const specFilesCount = specFilesMatch ? parseInt(specFilesMatch[1]) : 'N/A';
 
 // Extraer duración total
-const durationMatch = relevantSection.match(/in\s+([\d:]+)/);
+const durationMatch = finalSection.match(/in\s+([\d:]+)/);
 const totalTime = durationMatch ? durationMatch[1] : 'N/A';
 
 // Reemplazar título
