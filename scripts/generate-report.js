@@ -30,12 +30,18 @@ if (start === -1) {
 const relevantSection = raw.substring(start);
 
 // Cortar al final del resumen si existe
-const end = relevantSection.indexOf('Spec Files:');
+const specFilesRegex = /Spec Files:.*$/m;
+const match = relevantSection.match(specFilesRegex);
 
-const finalSection =
-  end !== -1
-    ? relevantSection.substring(0, end + 200)
-    : relevantSection;
+const finalSection = match
+  ? relevantSection.substring(0, match.index + match[0].length)
+  : relevantSection;
+//const end = relevantSection.indexOf('Spec Files:');
+
+//const finalSection =
+//  end !== -1
+//    ? relevantSection.substring(0, end + 200)
+//    : relevantSection;
 
 // =========================
 // Sanitizar HTML
