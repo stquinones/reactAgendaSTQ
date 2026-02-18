@@ -16,6 +16,47 @@ jobs:
         with:
           node-version: 18
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}    
+
+      - name: Start Device Farm run
+        id: run
+        run: |
+          RUN_ARN=$(aws devicefarm schedule-run \
+            --project-arn YOUR_PROJECT_ARN \
+            --app-arn YOUR_APP_ARN \
+            --device-pool-arn YOUR_POOL_ARN \
+            --test type=APPIUM_NODE,testPackageArn=YOUR_TEST_PACKAGE_ARN \
+            --query 'run.arn' --output text)
+
+          echo "RUN_ARN=$RUN_ARN" >> $GITHUB_OUTPUT   
+
+       - name: Wait for Device Farm
+        run: |
+          STATUS="PENDING"
+          while [[ "$STATUS" != "COMPLETED" && "$STATUS" != "ERRORED" ]]; do
+            STATUS=$(aws devicefarm get-run \
+              --arn ${{ steps.run.outputs.RUN_ARN }} \
+              --query 'run.status' --output text)
+            echo "Status: $STATUS"
+            sleep 30
+          done   
+
+       - name: Download Device Farm output
+        run: |
+          mkdir -p reports
+          URL=$(aws devicefarm list-artifacts \
+            --arn ${{ steps.run.outputs.RUN_ARN }} \
+            --type FILE \
+            --query 'artifacts[0].url' \
+            --output text)
+
+          curl "$URL" -o reports/devicefarm-log.txt    
+
       - name: Crear carpeta de reportes
         run: mkdir -p reports
 
