@@ -21,7 +21,10 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}    
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Test AWS connection
+        run: aws sts get-caller-identity
 
       - name: Start Device Farm run
         id: run
@@ -33,9 +36,9 @@ jobs:
             --test type=APPIUM_NODE,testPackageArn=YOUR_TEST_PACKAGE_ARN \
             --query 'run.arn' --output text)
 
-          echo "RUN_ARN=$RUN_ARN" >> $GITHUB_OUTPUT   
+          echo "RUN_ARN=$RUN_ARN" >> $GITHUB_OUTPUT
 
-       - name: Wait for Device Farm
+      - name: Wait for Device Farm
         run: |
           STATUS="PENDING"
           while [[ "$STATUS" != "COMPLETED" && "$STATUS" != "ERRORED" ]]; do
@@ -44,9 +47,9 @@ jobs:
               --query 'run.status' --output text)
             echo "Status: $STATUS"
             sleep 30
-          done   
+          done
 
-       - name: Download Device Farm output
+      - name: Download Device Farm output
         run: |
           mkdir -p reports
           URL=$(aws devicefarm list-artifacts \
@@ -55,13 +58,7 @@ jobs:
             --query 'artifacts[0].url' \
             --output text)
 
-          curl "$URL" -o reports/devicefarm-log.txt    
-
-      - name: Crear carpeta de reportes
-        run: mkdir -p reports
-
-      - name: Copiar archivo de Device Farm
-        run: cp "device-farm-output.txt" reports/devicefarm-log.txt
+          curl "$URL" -o reports/devicefarm-log.txt
 
       - name: Instalar dependencias
         run: npm install
@@ -86,7 +83,7 @@ jobs:
           payload: |
             {
               "channel": "#prueba-app",
-              "text": "*${{ steps.generate-report.outputs.SLACK_TEXT }}*\n\n:iphone: Dispositivo: Android\n:stopwatch: Duración total: ${{ steps.generate-report.outputs.DURATION }}\n:file_folder: Archivos ejecutados: ${{ steps.generate-report.outputs.FILECOUNT }}\n:point_right: <${{ steps.upload.outputs.artifact-url }}|*Ver reporte completo*>"
+              "text": "*Reporte generado*\n\n:iphone: Dispositivo: Android\n:point_right: <${{ steps.upload.outputs.artifact-url }}|Ver reporte completo>"
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
