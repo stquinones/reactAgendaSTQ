@@ -1,0 +1,94 @@
+name: Device Farm Listener
+
+on:
+  workflow_dispatch:
+
+jobs:
+  wait-and-download:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+
+      - name: Wait for latest run to finish
+        run: |
+          PROJECT_ARN="arn:aws:devicefarm:us-west-2:727454133357:project:5648f1c7-6a51-4cf5-9d08-6aa64bfcc944"
+
+          RUN_ARN=$(aws devicefarm list-runs \
+            --arn $PROJECT_ARN \
+            --query "runs[0].arn" \
+            --output text)
+
+          STATUS="PENDING"
+
+          while [[ "$STATUS" == "PENDING" || "$STATUS" == "PROCESSING" || "$STATUS" == "RUNNING" || "$STATUS" == "SCHEDULING" ]]; do
+            sleep 60
+            STATUS=$(aws devicefarm get-run \
+              --arn $RUN_ARN \
+              --query "run.status" \
+              --output text)
+            echo "Estado actual: $STATUS"
+          done
+
+          echo "RUN_ARN=$RUN_ARN" >> $GITHUB_ENV
+
+      - name: Get Test Suite ARN
+        run: |
+          SUITE_ARN=$(aws devicefarm list-suites \
+            --arn $RUN_ARN \
+            --query "suites[0].arn" \
+            --output text)
+
+          echo "SUITE_ARN=$SUITE_ARN" >> $GITHUB_ENV
+
+      - name: Get Test ARN
+        run: |
+          TEST_ARN=$(aws devicefarm list-tests \
+            --arn $SUITE_ARN \
+            --query "tests[0].arn" \
+            --output text)
+
+          echo "TEST_ARN=$TEST_ARN" >> $GITHUB_ENV
+
+      - name: Get Test Spec Output artifact
+        run: |
+          ARTIFACT_ARN=$(aws devicefarm list-artifacts \
+            --arn $TEST_ARN \
+            --type FILE \
+            --query "artifacts[?name=='Test spec output'].arn" \
+            --output text)
+
+          echo "ARTIFACT_ARN=$ARTIFACT_ARN" >> $GITHUB_ENV
+
+      - name: Download artifact
+        run: |
+          URL=$(aws devicefarm get-artifact \
+            --arn $ARTIFACT_ARN \
+            --query "artifact.url" \
+            --output text)
+
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          FILE_NAME="devicefarm_output_$TIMESTAMP.zip"
+
+          curl -L "$URL" -o "$FILE_NAME"
+
+          echo "FILE_NAME=$FILE_NAME" >> $GITHUB_ENV
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+
+          mkdir -p devicefarm-results
+          mv $FILE_NAME devicefarm-results/
+
+          git add devicefarm-results/$FILE_NAME
+          git commit -m "Device Farm result $FILE_NAME"
+          git push
